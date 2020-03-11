@@ -18,7 +18,8 @@ jobs:
         id: output
         run: |
           echo "aaaaa" > ${{ github.workspace }}/xx.txt
-          echo ::set-env name=VERSION::"${${{ github.sha }}:0:6}"
+          V=${{ github.sha }}
+          echo ::set-env name=VERSION::"${V:0:6}"
 
       -
         name: Create Release
