@@ -20,12 +20,6 @@ jobs:
           echo "aaaaa" > ${{ github.workspace }}/xx.txt
           echo "::set-env name=PWD::$(pwd)"
 
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    needs: [test]
-    steps:
-
       -
         name: Create Release
         id: create_release
