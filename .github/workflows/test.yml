@@ -18,8 +18,7 @@ jobs:
         id: output
         run: |
           echo "aaaaa" > ${{ github.workspace }}/xx.txt
-          echo "::set-env name=COMMIT::${${{ github.sha }}:0:6}"
-          echo "::set-env name=PWD::$(pwd)"
+          echo ::set-env name=RELEASE_DATE::"$(TZ=UTC-8 date +"%Y.%m.%d")"
 
       -
         name: Create Release
@@ -28,8 +27,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.COMMIT }}
-          release_name: Release ${{ env.COMMIT }}
+          tag_name: ${{ env.RELEASE_DATE }}
+          release_name: Release ${{ env.RELEASE_DATE }}
           draft: false
           prerelease: false
 
