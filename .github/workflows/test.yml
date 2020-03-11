@@ -18,7 +18,7 @@ jobs:
         id: output
         run: |
           echo "aaaaa" > ${{ github.workspace }}/xx.txt
-          echo ::set-env name=RELEASE_DATE::"$(TZ=UTC-8 date +"%Y.%m.%d")"
+          echo ::set-env name=VERSION::"${${{ github.sha }}:0:6}"
 
       -
         name: Create Release
@@ -27,8 +27,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.RELEASE_DATE }}
-          release_name: Release ${{ env.RELEASE_DATE }}
+          tag_name: ${{ env.VERSION }}
+          release_name: Release ${{ env.VERSION }}
           draft: false
           prerelease: false
 
