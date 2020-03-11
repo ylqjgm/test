@@ -18,7 +18,7 @@ jobs:
         id: output
         run: |
           echo "aaaaa" > ${{ github.workspace }}/xx.txt
-          echo "::set-env name=COMMIT::$(${{ github.sha }}:0:6)"
+          echo "::set-env name=COMMIT::$(${${{ github.sha }}:0:6})"
           echo "::set-env name=PWD::$(pwd)"
 
       -
