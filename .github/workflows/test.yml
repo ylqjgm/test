@@ -17,6 +17,7 @@ jobs:
         name: output
         id: output
         run: |
+          echo ${{ toJson(github) }}
           echo "aaaaa" > ${{ github.workspace }}/xx.txt
           echo "::set-env name=PWD::$(pwd)"
 
