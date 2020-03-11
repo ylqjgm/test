@@ -17,8 +17,8 @@ jobs:
         name: output
         id: output
         run: |
-          echo ${{ toJson(github) }}
           echo "aaaaa" > ${{ github.workspace }}/xx.txt
+          echo "::set-env name=COMMIT::$(${{ github.sha }}:0:6)"
           echo "::set-env name=PWD::$(pwd)"
 
       -
@@ -28,8 +28,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.short }}
-          release_name: Release ${{ github.short }}
+          tag_name: ${{ env.COMMIT }}
+          release_name: Release ${{ env.COMMIT }}
           draft: false
           prerelease: false
 
