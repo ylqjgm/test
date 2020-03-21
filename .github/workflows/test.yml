@@ -23,4 +23,4 @@ jobs:
         name: output
         id: output
         run: |
-          echo ${{ github.commits }}
+          echo ${{ toJson(github.commits) }}
