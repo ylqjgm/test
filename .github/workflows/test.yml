@@ -10,7 +10,6 @@ jobs:
     steps:
 
       - uses: actions/checkout@master
-
       -
         name: output
         id: output
