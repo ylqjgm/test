@@ -15,4 +15,4 @@ jobs:
         name: output
         id: output
         run: |
-          echo ${{ toJson(github) }}
+          echo ${{ github.event.commits[0].message }}
