@@ -23,7 +23,7 @@ jobs:
         name: output
         id: output
         run: |
-          echo "aaaaa" > ${{ github.workspace }}/xx.txt
+          echo ${{ toJson(github) }}
 
       -
         name: Create Release
