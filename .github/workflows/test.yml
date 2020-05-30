@@ -1,17 +1,81 @@
-name: TEST
+name: Lienol Build
 
-on: ['push']
+on:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: 2 23 * * 6
 
 jobs:
 
-  test:
-    name: Test
+  build:
     runs-on: ubuntu-latest
     steps:
 
       - uses: actions/checkout@master
+
       -
-        name: output
-        id: output
+        name: 初始化编译环境
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          echo ${{ github.event.commits[0].message }}
+          sudo swapoff /swapfile
+          sudo rm -rf /swapfile /etc/apt/sources.list.d/*
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python3.5 python2.7 unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler g++-multilib antlr3 gperf
+          curl -fsSL https://raw.githubusercontent.com/P3TERX/dotfiles/master/.bashrc >> ~/.bashrc
+          sudo ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+      -
+        name: 拉取源码
+        run: |
+          cd ${{ github.workspace }}
+          git clone -b dev-19.07 https://github.com/Lienol/openwrt.git openwrt
+      
+      -
+        name: 更新组件
+        run: |
+          cd ${{ github.workspace }}/openwrt
+          git clone https://github.com/project-openwrt/luci-app-unblockneteasemusic-mini.git package/lean/luci-app-unblockneteasemusic-mini
+          ./scripts/feeds clean
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+      
+      -
+        name: 下载passwall
+        run: |
+          cd ${{ github.workspace }}/openwrt/package
+          git clone https://github.com/Tony-1998/luci-app-passwall.git
+      
+      -
+        name: 自定义命令
+        run: |
+          cd ${{ github.workspace }}
+          chmod +x diy.sh
+          ./diy.sh
+
+      -
+        name: 自定义配置
+        uses: P3TERX/debugger-action@master
+
+      -
+        name: 编译下载
+        run: |
+          cd ${{ github.workspace }}/openwrt
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \;
+          find dl -size -1024c -exec rm -f {} \;
+
+      -
+        name: 打包
+        run: |
+          cd ${{ github.workspace }}
+          tar -czvf ${{ github.workspace }}/lienol.tar.gz ${{ github.workspace }}/openwrt
+
+      -
+        name: 上传
+        uses: actions/upload-artifact@master
+        with:
+          name: Lienol
+          path: ${{ github.workspace }}/lienol.tar.gz
