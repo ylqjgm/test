@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - master
-  schedule:
-    - cron: 2 23 * * 6
 
 jobs:
 
@@ -23,7 +21,7 @@ jobs:
           sudo swapoff /swapfile
           sudo rm -rf /swapfile /etc/apt/sources.list.d/*
           sudo -E apt-get -qq update
-          sudo -E apt-get -qq install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python3.5 python2.7 unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler g++-multilib antlr3 gperf
+          sudo -E apt-get -qq install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler
           curl -fsSL https://raw.githubusercontent.com/P3TERX/dotfiles/master/.bashrc >> ~/.bashrc
           sudo ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
@@ -31,22 +29,24 @@ jobs:
         name: 拉取源码
         run: |
           cd ${{ github.workspace }}
-          git clone -b dev-19.07 https://github.com/Lienol/openwrt.git openwrt
-      
+          git clone --depth 1 -b master https://github.com/coolsnowwolf/lede.git openwrt
+          cd openwrt
+          useVersionInfo=$(git show -s --date=short --format="Author: %an<br/>Date: %cd<br/>Commit: %s")
+          echo "::set-env name=useVersionInfo::$useVersionInfo"
+          echo "::set-env name=DATE::$(TZ=UTC-8 date "+%Y%m%d")"
+          echo "::set-env name=RELEASE_DATE::$(TZ=UTC-8 date "+%Y-%m-%d")"
+
       -
         name: 更新组件
         run: |
           cd ${{ github.workspace }}/openwrt
+          git clone https://github.com/ylqjgm/luci-app-passwall.git
+          cd ${{ github.workspace }}/openwrt
           git clone https://github.com/project-openwrt/luci-app-unblockneteasemusic-mini.git package/lean/luci-app-unblockneteasemusic-mini
+          git clone https://github.com/sypopo/luci-theme-argon-mc.git package/lean/luci-theme-argon-mc
           ./scripts/feeds clean
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-      
-      -
-        name: 下载passwall
-        run: |
-          cd ${{ github.workspace }}/openwrt/package
-          git clone https://github.com/Tony-1998/luci-app-passwall.git
       
       -
         name: 自定义命令
@@ -54,10 +54,17 @@ jobs:
           cd ${{ github.workspace }}
           chmod +x diy.sh
           ./diy.sh
+          rm -rf openwrt/package/default-settings/files/zzz-default-settings
+          cp -f zzz-default-settings openwrt/package/lean/default-settings/files/
 
       -
         name: 自定义配置
-        uses: P3TERX/debugger-action@master
+        run: |
+          cd ${{ github.workspace }}/openwrt
+          rm -f .config
+          cp ${{ github.workspace }}/lean.config ${{ github.workspace }}/openwrt/.config
+          sed -i 's/^[ \t]*//g' ./.config
+          make defconfig
 
       -
         name: 编译下载
@@ -68,14 +75,35 @@ jobs:
           find dl -size -1024c -exec rm -f {} \;
 
       -
-        name: 打包
+        name: 编译
         run: |
-          cd ${{ github.workspace }}
-          tar -czvf ${{ github.workspace }}/lienol.tar.gz ${{ github.workspace }}/openwrt
+          cd ${{ github.workspace }}/openwrt
+          echo -e "$(nproc) thread compile"
+          make -j$(nproc) || make -j1 V=s
+          echo ::set-env name=BUILD_STATUS::"success"
+          echo ::set-env name=RELEASE_TAG::"$(TZ=UTC-8 date +"%Y.%m.%d-%H")"
 
       -
-        name: 上传
-        uses: actions/upload-artifact@master
-        with:
-          name: Lienol
-          path: ${{ github.workspace }}/lienol.tar.gz
+        name: 链接SSH
+        uses: P3TERX/debugger-action@master
+
+      -
+        name: 整理文件
+        id: organize
+        if: env.BUILD_STATUS == 'success' && !failure()
+        run: |
+          mkdir -p ${{ github.workspace }}/dist
+          cp -r -f ${{ github.workspace }}/openwrt/bin/targets/*/*/*.bin ${{ github.workspace }}/dist/
+          tar -zcvf ${{ github.workspace }}/dist/Packages.tar.gz -C ${{ github.workspace }}/openwrt/bin/packages
+          cd ${{ github.workspace }}/dist/
+          sha256sum * > sha256sums
+
+      -
+        name: 上传奶牛快传
+        if: env.BUILD_STATUS == 'success' && !failure()
+        run: |
+          curl -fsSL git.io/file-transfer | sh
+          ./transfer cow --block 2621440 -s -p 99 -t 3 --hash --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
+          echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
+          echo "::set-env name=COWTRANSFER_URL::$(cat cowtransfer.log | grep https | cut -f3 -d" ")"
+          echo ${{ env.COWTRANSFER_URL }}
