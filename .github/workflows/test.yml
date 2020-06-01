@@ -60,6 +60,32 @@ jobs:
           cp -f zzz-default-settings openwrt/package/lean/default-settings/files/
 
       -
+        name: 自定义配置
+        run: |
+          cd ${{ github.workspace }}/openwrt
+          rm -f .config
+          cp ${{ github.workspace }}/lean.config ${{ github.workspace }}/openwrt/.config
+          sed -i 's/^[ \t]*//g' ./.config
+          make defconfig
+
+      -
+        name: 编译下载
+        run: |
+          cd ${{ github.workspace }}/openwrt
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \;
+          find dl -size -1024c -exec rm -f {} \;
+
+      -
+        name: 编译
+        run: |
+          cd ${{ github.workspace }}/openwrt
+          echo -e "$(nproc) thread compile"
+          make -j$(nproc) || make -j1 V=s
+          echo ::set-env name=BUILD_STATUS::"success"
+          echo ::set-env name=RELEASE_TAG::"$(TZ=UTC-8 date +"%Y.%m.%d-%H")"
+
+      -
         name: 链接SSH
         uses: P3TERX/debugger-action@master
 
