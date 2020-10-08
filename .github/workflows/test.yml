@@ -111,7 +111,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/openwrt
           echo -e "$(nproc) thread compile"
-          make -j$(nproc) 2>&1 | tee -a build.log || make -j1 V=s 2>&1 | tee -a build.log
+          make -j$(nproc) V=s 2>&1 | tee -a build.log || make -j1 V=s 2>&1 | tee -a build.log
           ls -la ${{ github.workspace }}/openwrt/bin/targets/*/*/
           echo "::set-output name=status::success"
 
